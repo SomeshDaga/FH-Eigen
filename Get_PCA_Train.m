@@ -23,8 +23,6 @@ Y = Y - repmat(mY, [1, img_num]);
 X = X - repmat(mX, [1, img_num]);
 
 %calculate PCA coefficent
-[El, Eh, Dl, Dh, Vl] = cal_PCA( double(Y), double(X) );
+[El, Eh, Dl, Dh, Vl] = cal_PCA( double(Y), double(X), par.k );
 
-
-    
 end

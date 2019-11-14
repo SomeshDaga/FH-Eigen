@@ -30,9 +30,9 @@ for i = 1:img_num
     fprintf('No.%d Bicubic PSNR %2.5f\n', i, csnr(imBicubic, imHR,0,0) );
     
     
-    
+    imwrite(uint8(reshape(imLR, [im_h/par.nFactor, im_w/par.nFactor])), ['Result/LR_', img_dir(i).name]);
     imwrite(uint8(result), ['Result/FHE_', img_dir(i).name]);
-    imwrite(uint8(result), ['Result/Bicu_', img_dir(i).name]);
+    imwrite(uint8(imBicubic), ['Result/Bicu_', img_dir(i).name]);
     
   
 end
