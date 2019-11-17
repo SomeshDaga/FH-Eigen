@@ -1,41 +1,42 @@
-function [ ] = SR_by_PCA( par, El, Eh, mY, mX, X, Vl, Dh )
+function [ bicubic, sr ] = SR_by_PCA( par, input, El, Eh, mY, mX, X, Vl, Dh )
 %reconstruct face images
 
-img_path  = par.test_path;
-img_type = par.test_type;
-img_dir = dir( fullfile(img_path, img_type) );
-img_num = length(img_dir);
+imHR  =  imread(input) ;
+[imHR, imLR] = get_LR( imHR, par );
+[im_h, im_w] = size( imHR );
 
-for i = 1:img_num
-    imHR  =  imread(fullfile( img_path, img_dir(i).name)) ;
-    [imHR, imLR] = get_LR( imHR, par );
-    [im_h, im_w] = size( imHR );
-    
-    c = Vl * (El' * (imLR(:) - mY));
-    x = real( X * c + mX );
-    result = reshape(x, [im_h, im_w]);
-    fprintf('No.%d FHE PSNR %2.5f\n', i, csnr(result, imHR,0,0) );
-    
-    wh = Eh'*(x-mX);
-    for j = 1:size(wh, 1)
-        if abs(wh(j)) > par.alpha*sqrt(Dh(j,j))
-            wh(j) = sign(wh(j))*par.alpha*sqrt(Dh(j,j));
-        end
+c = Vl * (El' * (imLR(:) - mY));
+x = real( X * c + mX );
+result = reshape(x, [im_h, im_w]);
+
+% Set the input basename of the file
+[~,name,ext] = fileparts(input);
+input = strcat(name,ext);
+
+fprintf('%s FHE PSNR %2.5f\n', input, csnr(result, imHR,0,0) );
+
+wh = Eh'*(x-mX);
+for j = 1:size(wh, 1)
+    if abs(wh(j)) > par.alpha*sqrt(Dh(j,j))
+        wh(j) = sign(wh(j))*par.alpha*sqrt(Dh(j,j));
     end
-    xh = real( Eh*wh + mX );
-    result = reshape(xh, [im_h, im_w]);
-    fprintf('No.%d FHE PSNR %2.5f\n', i, csnr(result, imHR,0,0) );
-    
-    imBicubic = imresize( imLR, par.nFactor, 'Bicubic');
-    fprintf('No.%d Bicubic PSNR %2.5f\n', i, csnr(imBicubic, imHR,0,0) );
-    
-    
-    imwrite(uint8(reshape(imLR, [im_h/par.nFactor, im_w/par.nFactor])), ['Result/LR_', img_dir(i).name]);
-    imwrite(uint8(result), ['Result/FHE_', img_dir(i).name]);
-    imwrite(uint8(imBicubic), ['Result/Bicu_', img_dir(i).name]);
-    
-  
 end
+xh = real( Eh*wh + mX );
+result = reshape(xh, [im_h, im_w]);
 
+fprintf('%s FHE PSNR %2.5f\n', input, csnr(result, imHR,0,0) );
+
+imBicubic = imresize( imLR, par.nFactor, 'Bicubic');
+fprintf('%s Bicubic PSNR %2.5f\n', input, csnr(imBicubic, imHR,0,0) );
+
+
+imwrite(uint8(reshape(imLR, [im_h/par.nFactor, im_w/par.nFactor])), ['Result/LR_', input]);
+imwrite(uint8(result), ['Result/FHE_', input]);
+imwrite(uint8(imBicubic), ['Result/Bicu_', input]);
+
+% Seems like the face landmark localization is actually more accurate
+% with the bicubic interpolated image than the super resolved ones
+bicubic = uint8(imBicubic);
+sr = uint8(result);
 end
 
