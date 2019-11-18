@@ -29,5 +29,5 @@ for i=1:img_num
     landmark = get_landmarks(bicubic, false);
     
     % Use extracted landmarks to create another super-resolved image
-    SR_by_LBF( par, sr, bicubic, landmark, dataset_landmarks.data);
+    SR_by_LBF( par, sr, bicubic, landmark, dataset_landmarks.data, mX);
 end
