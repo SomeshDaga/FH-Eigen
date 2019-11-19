@@ -24,10 +24,10 @@ img_dir = dir( fullfile(img_path, img_type) );
 img_num = length(img_dir);
 for i=1:img_num
     test_image = fullfile(img_path, img_dir(i).name);
-    [bicubic, sr] = SR_by_PCA( par, test_image, El, Eh, mY, mX, X, Vl, Dh );
+    [bicubic, sr, hr] = SR_by_PCA( par, test_image, El, Eh, mY, mX, X, Vl, Dh );
     % Extract landmarks from super-resolved image
     landmark = get_landmarks(bicubic, false);
     
     % Use extracted landmarks to create another super-resolved image
-    SR_by_LBF( par, sr, bicubic, landmark, dataset_landmarks.data, mX);
+    SR_by_LBF( par, hr, sr, bicubic, landmark, dataset_landmarks.data, mX);
 end

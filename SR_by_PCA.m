@@ -1,4 +1,4 @@
-function [ bicubic, sr ] = SR_by_PCA( par, input, El, Eh, mY, mX, X, Vl, Dh )
+function [ bicubic, sr, imHR ] = SR_by_PCA( par, input, El, Eh, mY, mX, X, Vl, Dh )
 %reconstruct face images
 
 imHR  =  imread(input) ;
@@ -13,7 +13,7 @@ result = reshape(x, [im_h, im_w]);
 [~,name,ext] = fileparts(input);
 input = strcat(name,ext);
 
-fprintf('%s FHE PSNR %2.5f\n', input, csnr(result, imHR,0,0) );
+fprintf('%s FHE PSNR %2.5f, SSIM %2.5f\n', input, csnr(uint8(result), uint8(imHR),0,0), ssim(result, imHR, 'Exponents', [0 0 1]) );
 
 wh = Eh'*(x-mX);
 for j = 1:size(wh, 1)
@@ -24,10 +24,10 @@ end
 xh = real( Eh*wh + mX );
 result = reshape(xh, [im_h, im_w]);
 
-fprintf('%s FHE PSNR %2.5f\n', input, csnr(result, imHR,0,0) );
+fprintf('%s FHE PSNR %2.5f, SSIM %2.5f\n', input, csnr(uint8(result), uint8(imHR),0,0), ssim(uint8(result), uint8(imHR), 'Exponents', [0 0 1]) );
 
 imBicubic = imresize( imLR, par.nFactor, 'Bicubic');
-fprintf('%s Bicubic PSNR %2.5f\n', input, csnr(imBicubic, imHR,0,0) );
+fprintf('%s Bicubic PSNR %2.5f, SSIM %2.5f\n', input, csnr(uint8(imBicubic), uint8(imHR),0,0), ssim(uint8(imBicubic), uint8(imHR), 'Exponents', [0 0 1]) );
 
 
 imwrite(uint8(reshape(imLR, [im_h/par.nFactor, im_w/par.nFactor])), ['Result/LR_', input]);

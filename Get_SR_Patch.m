@@ -24,11 +24,16 @@ for i=1:length(dataset_landmarks)
     % We disable scaling factors because the images are aligned and
     % and have been set to similar scales already via setting the center
     % eye distance to a fixed number of pixels
-    dissimilarity(i) = procrustes(feature_points, candidate_points, 'scaling', false);
+    [dissimilarity(i), ~, transform] = procrustes(feature_points, candidate_points, 'scaling', false);
+    if i==1
+        transforms = repmat(struct(transform),length(dataset_landmarks),1);
+    end
+    transforms(i) = transform;
 end
 
 % Choose the k highest similarities
 [vals, idxs] = mink(dissimilarity, k);
+transforms = transforms(idxs);
 
 % Re-create this region using just the images that are most similar
 
@@ -71,8 +76,10 @@ final_fft = zeros(best_bbox_size(1),best_bbox_size(2));
 [original, coords] = get_region(image, best_bbox_size, bbox_centers(end,:));
 
 for i=1:length(idxs)
-    % Get the equivalent face region from each of our best candidates
-    region = get_region(imread(dataset_landmarks(idxs(i)).file),best_bbox_size,bbox_centers(i,:));
+    tform = eye(3);
+%     tform(1:2,1:2) = transforms(i).T';
+    tform = affine2d(tform);
+    region = get_region(imwarp(imread(dataset_landmarks(idxs(i)).file),tform),best_bbox_size,bbox_centers(i,:));
     if i==1
         final_fft = (vals(i)/norm)*fft2(region);
     else

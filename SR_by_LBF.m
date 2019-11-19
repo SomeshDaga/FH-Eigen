@@ -1,4 +1,4 @@
-function [ ] = SR_by_LBF(par, sr_image, bicubic_image, landmarks, dataset_landmarks, mean_hr)
+function [ ] = SR_by_LBF(par, hr, sr_image, bicubic_image, landmarks, dataset_landmarks, mean_hr)
 %SR_BY_LBF Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -6,6 +6,31 @@ patched_image = sr_image;
 
 % Find the images and regions from the datasets that best match the facial
 % landmarks for a specific facial component of the input image
+
+% 0) Face Contour
+face_features = ["contour_left9",...
+                 "contour_left8",...
+                 "contour_left7",...
+                 "contour_left6",...
+                 "contour_left5",...
+                 "contour_left4",...
+                 "contour_left3",...
+                 "contour_left2",...
+                 "contour_left1",...
+                 "contour_chin",...
+                 "contour_right1",...
+                 "contour_right2",...
+                 "contour_right3",...
+                 "contour_right4",...
+                 "contour_right5",...
+                 "contour_right6",...
+                 "contour_right7",...
+                 "contour_right8",...
+                 "contour_right9"];
+% [face_patch, ~, coords] = Get_SR_Patch(sr_image, face_features, landmarks, dataset_landmarks, 2, 5);
+% coords
+% size(face_patch)
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = face_patch(:,1:107);
 
 % 1) Mouth Region
 mouth_features = ["mouth_left_corner",...
@@ -27,9 +52,9 @@ mouth_features = ["mouth_left_corner",...
                   "mouth_lower_lip_left_contour2",...
                   "mouth_lower_lip_left_contour1"];
 
-[mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks, dataset_landmarks, 2, 5);
-patched_image(coords(3):coords(4),coords(1):coords(2)) = mouth_patch;
-sr_image(coords(3):coords(4),coords(1):coords(2)) = 0;
+% [mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks, dataset_landmarks, 2, 2);
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = mouth_patch;
+
 % 2) Left Eye Region
 left_eye_features = ["left_eye_left_corner",...
                      "left_eye_upper_left_quarter",...
@@ -49,10 +74,10 @@ left_eyebrow_features = ["left_eyebrow_left_corner",...
                          "left_eyebrow_lower_right_quarter",...
                          "left_eyebrow_lower_middle",...
                          "left_eyebrow_lower_left_quarter"];
-left_eye_features = [left_eye_features left_eyebrow_features];
-[left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks, dataset_landmarks, 2, 2);
-patched_image(coords(3):coords(4),coords(1):coords(2)) = left_eye_patch;
-sr_image(coords(3):coords(4),coords(1):coords(2)) = 0;
+% left_eye_features = [left_eye_features left_eyebrow_features];
+% [left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks, dataset_landmarks, 2, 2);
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = left_eye_patch;
+
 % 3) Right Eye Region
 right_eye_features = ["right_eye_left_corner",...
                       "right_eye_upper_left_quarter",...
@@ -72,10 +97,10 @@ right_eyebrow_features = ["right_eyebrow_left_corner",...
                           "right_eyebrow_lower_right_quarter",...
                           "right_eyebrow_lower_middle",...
                           "right_eyebrow_lower_left_quarter"];
-right_eye_features = [right_eye_features right_eyebrow_features];
-[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks, dataset_landmarks, 2, 2);
-patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
-sr_image(coords(3):coords(4),coords(1):coords(2)) = 0;
+% right_eye_features = [right_eye_features right_eyebrow_features];
+% [right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks, dataset_landmarks, 2, 2);
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
+
 % 4) Nose Region
 nose_features = ["nose_contour_left3",...
                  "nose_contour_left2",...
@@ -87,14 +112,45 @@ nose_features = ["nose_contour_left3",...
                  "nose_contour_right2",...
                  "nose_contour_right3",...
                  "nose_tip"];
-[nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks, dataset_landmarks, 5, 1);
-patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
-sr_image(coords(3):coords(4),coords(1):coords(2)) = 0;
+% [nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks, dataset_landmarks, 5, 2);
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
+% all_features = [face_features];
+% [best_face, ~, coords] = Get_SR_Patch(sr_image, all_features, landmarks, dataset_landmarks, 5, 0);
+% patched_image = best_face;
+% imshow(patched_image);
+% waitforbuttonpress
 
-% Show the final patched image
-patched_image = imfuse(patched_image, sr_image, 'blend', 'Scaling','joint');
+[mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks, dataset_landmarks, 2, 0);
+patched_image(coords(3):coords(4),coords(1):coords(2)) = mouth_patch;
+
+left_eye_features = [left_eye_features left_eyebrow_features];
+[left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks, dataset_landmarks, 2, 0);
+patched_image(coords(3):coords(4),coords(1):coords(2)) = left_eye_patch;
+
+right_eye_features = [right_eye_features right_eyebrow_features];
+[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks, dataset_landmarks, 2, 0);
+patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
+
+[nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks, dataset_landmarks, 2, 0);
+patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
+% pad = 3;
+% nose_roi_int = [coords(3)+pad coords(1)+pad;
+%                 coords(4)-pad coords(1)+pad;
+%                 coords(4)-pad coords(2)-pad;
+%                 coords(3)+pad coords(2)-pad;
+%                 coords(3)+pad coords(1)+pad];
+% pad = 10;
+% nose_roi_ext = [coords(3)-pad coords(1)-pad;
+%                 coords(4)+pad coords(1)-pad;
+%                 coords(4)+pad coords(2)+pad;
+%                 coords(3)-pad coords(2)+pad;
+%                 coords(3)-pad coords(1)-pad];
+
+% mask = poly2mask(nose_roi_ext(:,1),nose_roi_ext(:,2),125,115) - poly2mask(nose_roi_int(:,1),nose_roi_int(:,2),125,115);
+
 imshow(patched_image);
 waitforbuttonpress
+size(hr)
+fprintf('%s Patched PSNR %2.5f, SSIM %2.5f\n', '', csnr(patched_image, uint8(hr),0,0), ssim(patched_image, uint8(hr), 'Exponents', [0 0 1]) );
 
 end
-
