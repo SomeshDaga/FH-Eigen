@@ -1,4 +1,4 @@
-function [ ] = SR_by_LBF(par, hr, sr_image, bicubic_image, landmarks, dataset_landmarks, mean_hr)
+function [ ] = SR_by_LBF(par, hr, sr_image, bicubic_image, landmarks_sr, landmarks_bicubic, dataset_landmarks, mean_hr)
 %SR_BY_LBF Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -120,19 +120,26 @@ nose_features = ["nose_contour_left3",...
 % imshow(patched_image);
 % waitforbuttonpress
 
-[mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks, dataset_landmarks, 2, 0);
+[mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks_bicubic, dataset_landmarks, 2, 4);
+mouth_patch = imhistmatch(mouth_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = mouth_patch;
+sr_mouth = sr_image(coords(3):coords(4),coords(1):coords(2));
+bicubic_mouth = bicubic_image(coords(3):coords(4),coords(1):coords(2));
+hr_mouth = hr(coords(3):coords(4),coords(1):coords(2));
+
+[nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks_bicubic, dataset_landmarks, 2, 3);
+nose_patch = imhistmatch(nose_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'uniform');
+patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
 
 left_eye_features = [left_eye_features left_eyebrow_features];
-[left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks, dataset_landmarks, 2, 0);
+[left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks_sr, dataset_landmarks, 2, 3);
+left_eye_patch = imhistmatch(left_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = left_eye_patch;
 
 right_eye_features = [right_eye_features right_eyebrow_features];
-[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks, dataset_landmarks, 2, 0);
+[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks_bicubic, dataset_landmarks, 2, 3);
+right_eye_patch = imhistmatch(right_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
-
-[nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks, dataset_landmarks, 2, 0);
-patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
 % pad = 3;
 % nose_roi_int = [coords(3)+pad coords(1)+pad;
 %                 coords(4)-pad coords(1)+pad;
@@ -151,6 +158,19 @@ patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
 imshow(patched_image);
 waitforbuttonpress
 size(hr)
-fprintf('%s Patched PSNR %2.5f, SSIM %2.5f\n', '', csnr(patched_image, uint8(hr),0,0), ssim(patched_image, uint8(hr), 'Exponents', [0 0 1]) );
+
+% Mouth patch psnr's/ssim's
+subplot(2,2,1);
+imshow(uint8(hr_mouth));
+subplot(2,2,2);
+imshow(bicubic_mouth);
+subplot(2,2,3);
+imshow(sr_mouth);
+subplot(2,2,4);
+imshow(mouth_patch);
+waitforbuttonpress
+fprintf('%s Mouth - Patched PSNR %2.5f, SSIM %2.5f\n', '', csnr(mouth_patch, uint8(hr_mouth),0,0), ssim(mouth_patch, uint8(hr_mouth), 'Exponents', [0 0 1]) );
+fprintf('%s Mouth - Bicubic PSNR %2.5f, SSIM %2.5f\n', '', csnr(bicubic_mouth, uint8(hr_mouth),0,0), ssim(bicubic_mouth, uint8(hr_mouth), 'Exponents', [0 0 1]) );
+fprintf('%s Mouth - SR PSNR %2.5f, SSIM %2.5f\n', '', csnr(sr_mouth, uint8(hr_mouth),0,0), ssim(sr_mouth, uint8(hr_mouth), 'Exponents', [0 0 1]) );
 
 end

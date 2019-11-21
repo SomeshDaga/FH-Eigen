@@ -36,7 +36,7 @@ resp = urlreadpost(url,{'api_key', api_key,...
                     
 % Parse the response into a MATLAB struct
 landmarks = jsondecode(resp);
-
+pause(0.5);
 if ~is_file
     imshow(file_path)
     hold on

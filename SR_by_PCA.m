@@ -7,6 +7,7 @@ imHR  =  imread(input) ;
 
 c = Vl * (El' * (imLR(:) - mY));
 x = real( X * c + mX );
+sum(c)
 result = reshape(x, [im_h, im_w]);
 
 % Set the input basename of the file
@@ -27,7 +28,7 @@ result = reshape(xh, [im_h, im_w]);
 fprintf('%s FHE PSNR %2.5f, SSIM %2.5f\n', input, csnr(uint8(result), uint8(imHR),0,0), ssim(uint8(result), uint8(imHR), 'Exponents', [0 0 1]) );
 
 imBicubic = imresize( imLR, par.nFactor, 'Bicubic');
-fprintf('%s Bicubic PSNR %2.5f, SSIM %2.5f\n', input, csnr(uint8(imBicubic), uint8(imHR),0,0), ssim(uint8(imBicubic), uint8(imHR), 'Exponents', [0 0 1]) );
+fprintf('%s Bicubic PSNR %2.5f, SSIM %2.5f\n', input, csnr(uint8(imBicubic), uint8(imHR),0,0), ssim(uint8(imBicubic), uint8(imHR))  );
 
 
 imwrite(uint8(reshape(imLR, [im_h/par.nFactor, im_w/par.nFactor])), ['Result/LR_', input]);
