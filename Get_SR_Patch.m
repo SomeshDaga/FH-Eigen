@@ -1,4 +1,4 @@
-function [patch, original, coords] = Get_SR_Patch(image, features, landmarks, dataset_landmarks, k, padding)
+function [patch, original, coords] = Get_SR_Patch(image, features, landmarks, dataset_landmarks, center_feature, k, padding)
 %GET_SR_PATCH Summary of this function goes here
 %   Detailed explanation goes here
 % Create a matrix of points containing the above features from the input
@@ -42,10 +42,11 @@ transforms = transforms(idxs);
 % We need the extracted regions to have the same dimensions for the math to
 % work out. Hence, we need to find the most conservative size of bounding
 % box that captures the mouth region in all the images
-sr_x_max = max(feature_points(:,1)) + padding;
-sr_x_min = min(feature_points(:,1)) - padding;
-sr_y_max = max(feature_points(:,2)) + padding;
-sr_y_min = min(feature_points(:,2)) - padding;
+bbox_centers(end,:) = [landmarks.faces.landmark.(center_feature).x ...
+                       landmarks.faces.landmark.(center_feature).y];
+max_x_dist = sqrt(max((feature_points(:,1) - bbox_centers(end,1))^2)) + padding;
+max_y_dist = sqrt(max((feature_points(:,2) - bbox_centers(end,2))^2)) + padding;
+candidate_bboxes(end,:)= [2*max_x_dist 2*max_y_dist];
 
 % Create a 3D array to store the mouth points for all candidate images
 candidate_points = zeros(length(features),2,length(idxs));

@@ -137,7 +137,7 @@ left_eye_patch = imhistmatch(left_eye_patch, patched_image(coords(3):coords(4),c
 patched_image(coords(3):coords(4),coords(1):coords(2)) = left_eye_patch;
 
 right_eye_features = [right_eye_features right_eyebrow_features];
-[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks_bicubic, dataset_landmarks, 2, 3);
+[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks_sr, dataset_landmarks, 2, 3);
 right_eye_patch = imhistmatch(right_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
 % pad = 3;
