@@ -26,8 +26,7 @@ img_num = length(img_dir);
 for i=1:img_num
     test_image = fullfile(img_path, img_dir(i).name);
     [bicubic, sr, hr] = SR_by_PCA( par, test_image, El, Eh, mY, mX, X, Vl, Dh );
-    imshow(sr);
-    waitforbuttonpress
+
     % Extract landmarks from super-resolved image
     landmark_bicubic = get_landmarks(bicubic, false);
     landmark_sr = get_landmarks(sr, false);

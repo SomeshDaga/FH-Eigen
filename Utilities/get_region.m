@@ -2,10 +2,11 @@ function [ region, coords ] = get_region(image, bbox_size, bbox_centers)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 [h, w] = size(image);
-y_min = round(bbox_centers(2)-bbox_size(2)/2);
-y_max = round(bbox_centers(2)+bbox_size(2)/2);
-x_max = round(bbox_centers(1)+bbox_size(1)/2);
-x_min = round(bbox_centers(1)-bbox_size(1)/2);
+
+y_min = round(bbox_centers(2) - bbox_size(3));
+y_max = round(bbox_centers(2) + bbox_size(4));
+x_max = round(bbox_centers(1) + bbox_size(2));
+x_min = round(bbox_centers(1) - bbox_size(1));
 if y_max > h
     y_min = y_min - (y_max - h);
     y_max = h;

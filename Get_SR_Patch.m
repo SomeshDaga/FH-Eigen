@@ -3,6 +3,7 @@ function [patch, original, coords] = Get_SR_Patch(image, features, landmarks, da
 %   Detailed explanation goes here
 % Create a matrix of points containing the above features from the input
 % image
+[im_h, im_w] = size(image);
 feature_points = zeros(length(features),2);
 for i=1:length(features)
     feature = landmarks.faces.landmark.(features(i));
@@ -42,11 +43,7 @@ transforms = transforms(idxs);
 % We need the extracted regions to have the same dimensions for the math to
 % work out. Hence, we need to find the most conservative size of bounding
 % box that captures the mouth region in all the images
-bbox_centers(end,:) = [landmarks.faces.landmark.(center_feature).x ...
-                       landmarks.faces.landmark.(center_feature).y];
-max_x_dist = sqrt(max((feature_points(:,1) - bbox_centers(end,1))^2)) + padding;
-max_y_dist = sqrt(max((feature_points(:,2) - bbox_centers(end,2))^2)) + padding;
-candidate_bboxes(end,:)= [2*max_x_dist 2*max_y_dist];
+
 
 % Create a 3D array to store the mouth points for all candidate images
 candidate_points = zeros(length(features),2,length(idxs));
@@ -57,24 +54,76 @@ for i=1:length(idxs)
     end
 end
 
-candidate_bboxes = zeros(length(idxs)+1,2);
+candidate_bboxes = zeros(length(idxs)+1,4);
 bbox_centers = zeros(length(idxs)+1,2);
 for i=1:length(idxs)
-    x_max = max(candidate_points(:,1,i)) + padding;
-    x_min = min(candidate_points(:,1,i)) - padding;
-    y_max = max(candidate_points(:,2,i)) + padding;
-    y_min = min(candidate_points(:,2,i)) - padding;
-    bbox_centers(i,:) = [(x_max + x_min)/2 (y_max + y_min)/2];
-    candidate_bboxes(i,:) = [(x_max - x_min) (y_max - y_min)];
+    bbox_centers(i,:) = [dataset_landmarks(idxs(i)).faces.landmark.(center_feature).x ...
+                         dataset_landmarks(idxs(i)).faces.landmark.(center_feature).y];
+    % Find the max deviations of features from the given centers
+    % in the +ve x and y directions
+    max_x_dist = max(candidate_points(:,1,i) - bbox_centers(i,1)) + padding;
+    max_y_dist = max(candidate_points(:,2,i) - bbox_centers(i,2)) + padding;
+    min_x_dist = abs(min(candidate_points(:,1,i) - bbox_centers(i,1))) + padding;
+    min_y_dist = abs(min(candidate_points(:,2,i) - bbox_centers(i,2))) + padding;
+%     if max_x_dist > im_w - padding
+%         max_x_dist = im_w;
+%     else
+%         max_x_dist = max_x_dist + padding;
+%     end
+%     if max_y_dist > im_h - padding
+%         max_y_dist = im_h;
+%     else
+%         max_y_dist = max_y_dist + padding;
+%     end
+%     if min_x_dist < padding + 1
+%         min_x_dist = 1;
+%     else
+%         min_x_dist = min_x_dist - padding;
+%     end
+%     if min_y_dist < padding + 1
+%         min_y_dist = 1;
+%     else
+%         min_y_dist = min_y_dist - padding;
+%     end
+    candidate_bboxes(i,:)= [min_x_dist max_x_dist min_y_dist max_y_dist];
 end
-candidate_bboxes(end,:) = [(sr_x_max - sr_x_min) (sr_y_max - sr_y_min)];
-bbox_centers(end,:) = [(sr_x_max + sr_x_min)/2 (sr_y_max + sr_y_min)/2];
-best_bbox_size = [max(candidate_bboxes(:,1)) max(candidate_bboxes(:,2))];
+
+bbox_centers(end,:) = [landmarks.faces.landmark.(center_feature).x ...
+                       landmarks.faces.landmark.(center_feature).y];
+max_x_dist = max(feature_points(:,1) - bbox_centers(end,1)) + padding;
+max_y_dist = max(feature_points(:,2) - bbox_centers(end,2)) + padding;
+min_x_dist = abs(min(feature_points(:,1) - bbox_centers(end,1))) + padding;
+min_y_dist = abs(min(feature_points(:,2) - bbox_centers(end,2))) + padding;
+% if max_x_dist > im_w - padding
+%     max_x_dist = im_w;
+% else
+%     max_x_dist = max_x_dist + padding;
+% end
+% if max_y_dist > im_h - padding
+%     max_y_dist = im_h;
+% else
+%     max_y_dist = max_y_dist + padding;
+% end
+% if min_x_dist < padding + 1
+%     min_x_dist = 1;
+% else
+%     min_x_dist = min_x_dist - padding;
+% end
+% if min_y_dist < padding + 1
+%     min_y_dist = 1;
+% else
+%     min_y_dist = min_y_dist - padding;
+% end
+candidate_bboxes(end,:)= [min_x_dist max_x_dist min_y_dist max_y_dist];
+
+best_bbox_size = [min(candidate_bboxes(:,1)) max(candidate_bboxes(:,2)) ...
+                  min(candidate_bboxes(:,3)) max(candidate_bboxes(:,4))];
 
 % Combine the FFTs from the candidate images based on their 
 norm = sum(vals);
-final_fft = zeros(best_bbox_size(1),best_bbox_size(2));
 [original, coords] = get_region(image, best_bbox_size, bbox_centers(end,:));
+
+final_fft = zeros(coords(2)-coords(1), coords(4)-coords(3));
 
 for i=1:length(idxs)
     tform = eye(3);

@@ -120,24 +120,24 @@ nose_features = ["nose_contour_left3",...
 % imshow(patched_image);
 % waitforbuttonpress
 
-[mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks_bicubic, dataset_landmarks, 2, 4);
+[mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks_bicubic, dataset_landmarks, "mouth_lower_lip_top", 2, 8);
 mouth_patch = imhistmatch(mouth_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = mouth_patch;
 sr_mouth = sr_image(coords(3):coords(4),coords(1):coords(2));
 bicubic_mouth = bicubic_image(coords(3):coords(4),coords(1):coords(2));
 hr_mouth = hr(coords(3):coords(4),coords(1):coords(2));
 
-[nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks_bicubic, dataset_landmarks, 2, 3);
+[nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks_bicubic, dataset_landmarks, "nose_tip", 2, 3);
 nose_patch = imhistmatch(nose_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'uniform');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
 
 left_eye_features = [left_eye_features left_eyebrow_features];
-[left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks_sr, dataset_landmarks, 2, 3);
+[left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks_sr, dataset_landmarks, "left_eye_center", 2, 3);
 left_eye_patch = imhistmatch(left_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = left_eye_patch;
 
 right_eye_features = [right_eye_features right_eyebrow_features];
-[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks_sr, dataset_landmarks, 2, 3);
+[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks_sr, dataset_landmarks, "right_eye_center", 2, 3);
 right_eye_patch = imhistmatch(right_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
 % pad = 3;
@@ -154,7 +154,13 @@ patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
 %                 coords(3)-pad coords(1)-pad];
 
 % mask = poly2mask(nose_roi_ext(:,1),nose_roi_ext(:,2),125,115) - poly2mask(nose_roi_int(:,1),nose_roi_int(:,2),125,115);
-
+subplot(2,2,1)
+imshow(uint8(hr));
+subplot(2,2,2);
+imshow(sr_image);
+subplot(2,2,3);
+imshow(bicubic_image);
+subplot(2,2,4);
 imshow(patched_image);
 waitforbuttonpress
 size(hr)
