@@ -1,9 +1,13 @@
-function [landmarks] = get_landmarks(file_path, is_file)
+function [landmarks] = get_landmarks(file_path, is_file, show_landmarks)
 %GET_LANDMARKS Returns face landmarks for a given image
 %   Makes an API call to Face++ to analyze and return facial landmarks
 
 if nargin < 2
     is_file = true;
+end
+
+if nargin < 3
+    show_landmarks = false;
 end
 
 url = 'https://api-us.faceplusplus.com/facepp/v3/detect';
@@ -37,7 +41,7 @@ resp = urlreadpost(url,{'api_key', api_key,...
 % Parse the response into a MATLAB struct
 landmarks = jsondecode(resp);
 pause(0.5);
-if ~is_file
+if ~is_file && show_landmarks
     subplot(1,1,1);
     imshow(file_path)
     hold on

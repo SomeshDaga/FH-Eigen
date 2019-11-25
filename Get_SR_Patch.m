@@ -32,7 +32,7 @@ for i=1:length(dataset_landmarks)
     transforms(i) = transform;
 end
 
-% Choose the k highest similarities
+% Choose the k highest similarities (or lowest dissimlarities)
 [vals, idxs] = mink(dissimilarity, k);
 transforms = transforms(idxs);
 
@@ -65,26 +65,6 @@ for i=1:length(idxs)
     max_y_dist = max(candidate_points(:,2,i) - bbox_centers(i,2)) + padding;
     min_x_dist = abs(min(candidate_points(:,1,i) - bbox_centers(i,1))) + padding;
     min_y_dist = abs(min(candidate_points(:,2,i) - bbox_centers(i,2))) + padding;
-%     if max_x_dist > im_w - padding
-%         max_x_dist = im_w;
-%     else
-%         max_x_dist = max_x_dist + padding;
-%     end
-%     if max_y_dist > im_h - padding
-%         max_y_dist = im_h;
-%     else
-%         max_y_dist = max_y_dist + padding;
-%     end
-%     if min_x_dist < padding + 1
-%         min_x_dist = 1;
-%     else
-%         min_x_dist = min_x_dist - padding;
-%     end
-%     if min_y_dist < padding + 1
-%         min_y_dist = 1;
-%     else
-%         min_y_dist = min_y_dist - padding;
-%     end
     candidate_bboxes(i,:)= [min_x_dist max_x_dist min_y_dist max_y_dist];
 end
 
@@ -94,26 +74,7 @@ max_x_dist = max(feature_points(:,1) - bbox_centers(end,1)) + padding;
 max_y_dist = max(feature_points(:,2) - bbox_centers(end,2)) + padding;
 min_x_dist = abs(min(feature_points(:,1) - bbox_centers(end,1))) + padding;
 min_y_dist = abs(min(feature_points(:,2) - bbox_centers(end,2))) + padding;
-% if max_x_dist > im_w - padding
-%     max_x_dist = im_w;
-% else
-%     max_x_dist = max_x_dist + padding;
-% end
-% if max_y_dist > im_h - padding
-%     max_y_dist = im_h;
-% else
-%     max_y_dist = max_y_dist + padding;
-% end
-% if min_x_dist < padding + 1
-%     min_x_dist = 1;
-% else
-%     min_x_dist = min_x_dist - padding;
-% end
-% if min_y_dist < padding + 1
-%     min_y_dist = 1;
-% else
-%     min_y_dist = min_y_dist - padding;
-% end
+
 candidate_bboxes(end,:)= [min_x_dist max_x_dist min_y_dist max_y_dist];
 
 best_bbox_size = [min(candidate_bboxes(:,1)) max(candidate_bboxes(:,2)) ...
@@ -123,22 +84,42 @@ best_bbox_size = [min(candidate_bboxes(:,1)) max(candidate_bboxes(:,2)) ...
 norm = sum(vals);
 [original, coords] = get_region(image, best_bbox_size, bbox_centers(end,:));
 
-final_fft = zeros(coords(2)-coords(1), coords(4)-coords(3));
+% Idea 1: Just replace the patch with a normalized linear combination of
+% the best K patches based on similarity value alone
+% final_fft = zeros(coords(2)-coords(1), coords(4)-coords(3));
+% 
+% for i=1:length(idxs)
+%     region = get_region(imread(dataset_landmarks(idxs(i)).file), best_bbox_size, bbox_centers(i,:));
+%     if i==1
+%         final_fft = (vals(i)/norm)*fft2(region);
+%     else
+%         temp_fft = (vals(i)/norm)*fft2(region);
+%         final_fft = temp_fft + final_fft;
+%     end
+% end
+% 
+% patch = uint8(real(ifft2(final_fft)));
 
+% Idea 2: Perform a PCA-based procedure on the K most similar regions
+% and replace the patch
+original = reshape(original, [numel(original), 1]);
 for i=1:length(idxs)
-    tform = eye(3);
-    tform(1:2,1:2) = transforms(i).T;
-    tform = affine2d(tform);
-    region = get_region(imread(dataset_landmarks(idxs(i)).file),best_bbox_size,bbox_centers(i,:));
-    if i==1
-        final_fft = (vals(i)/norm)*fft2(region);
-    else
-        temp_fft = (vals(i)/norm)*fft2(region);
-        final_fft = temp_fft + final_fft;
-    end
+    train_region = get_region(imread(dataset_landmarks(idxs(i)).file), best_bbox_size, bbox_centers(i,:));
+%     subplot(1,1,1);
+%     imshow(train_region);
+%     waitforbuttonpress
+    Y(:,i) = reshape(train_region,[numel(train_region),1]);
 end
-
-patch = uint8(real(ifft2(final_fft)));
-
+Y = double(Y);
+mY = mean(Y, 2);
+Y = Y - repmat(mY, [1, length(idxs)]);
+[V, Dl] = eig( Y'*Y );
+% Dl = Dl(end-k:end,end-k:end);
+% V = V(:,end-k:end);
+El = Y * V * Dl^(-0.5);
+Vl = V * Dl^(-0.5);
+weights = El' * (double(original) - mY);
+patch = El * weights + mY;
+patch = uint8(reshape(patch, [coords(4)-coords(3) + 1, coords(2) - coords(1) + 1]));
 end
 

@@ -1,18 +1,10 @@
-function [El, Eh, mY, mX, Y, X, Vl, Dh] = Get_PCA_Train( par )
+function [El, Eh, mY, mX, Y, X, Vl, Dh] = Get_PCA_Train(par, train_idxs, dataset)
 %calculate PCA of training faces 
 
-img_path  = par.train_path;
-img_type = par.train_type;
-img_dir = dir( fullfile(img_path, img_type) );
-%load( 'Data/train3.mat');
+img_num = length(train_idxs);
 
-X = [];
-Y = [];
-img_num = length(img_dir);
-%img_num = size(images_hr, 3);
 for i = 1 : img_num
-    imHR  =  imread(fullfile( img_path, img_dir(i).name)) ;
-   % imHR = images_hr(:,:,i);
+    imHR  =  imread(dataset(train_idxs(i)).file);
     [imHR, imLR] = get_LR( imHR, par );
     Y(:, i) = imLR(:); 
     X(:, i) = imHR(:);

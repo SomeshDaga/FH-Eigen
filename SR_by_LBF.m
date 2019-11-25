@@ -1,4 +1,4 @@
-function [ ] = SR_by_LBF(par, hr, sr_image, bicubic_image, landmarks_sr, landmarks_bicubic, dataset_landmarks, mean_hr)
+function [ ] = SR_by_LBF(par, input, hr, sr_image, bicubic_image, landmarks_sr, landmarks_bicubic, dataset_landmarks, mean_hr)
 %SR_BY_LBF Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -120,26 +120,32 @@ nose_features = ["nose_contour_left3",...
 % imshow(patched_image);
 % waitforbuttonpress
 
-[mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks_bicubic, dataset_landmarks, "mouth_lower_lip_top", 2, 8);
-mouth_patch = imhistmatch(mouth_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
+[mouth_patch, ~, coords] = Get_SR_Patch(sr_image, mouth_features, landmarks_bicubic, dataset_landmarks, "mouth_lower_lip_top", 8, 8);
+% mouth_patch = imhistmatch(mouth_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = mouth_patch;
 sr_mouth = sr_image(coords(3):coords(4),coords(1):coords(2));
 bicubic_mouth = bicubic_image(coords(3):coords(4),coords(1):coords(2));
 hr_mouth = hr(coords(3):coords(4),coords(1):coords(2));
 
-[nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks_bicubic, dataset_landmarks, "nose_tip", 2, 3);
-nose_patch = imhistmatch(nose_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'uniform');
+[nose_patch, ~, coords] = Get_SR_Patch(sr_image, nose_features, landmarks_bicubic, dataset_landmarks, "nose_tip", 10, 3);
+% nose_patch = imhistmatch(nose_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
 
 left_eye_features = [left_eye_features left_eyebrow_features];
-[left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks_sr, dataset_landmarks, "left_eye_center", 2, 3);
-left_eye_patch = imhistmatch(left_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
+[left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, left_eye_features, landmarks_sr, dataset_landmarks, "left_eye_center", 10, 3);
+% left_eye_patch = imhistmatch(left_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = left_eye_patch;
 
 right_eye_features = [right_eye_features right_eyebrow_features];
-[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks_sr, dataset_landmarks, "right_eye_center", 2, 3);
-right_eye_patch = imhistmatch(right_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
+[right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, right_eye_features, landmarks_sr, dataset_landmarks, "right_eye_center", 10, 3);
+% right_eye_patch = imhistmatch(right_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
+
+% eye_features = [left_eye_features left_eyebrow_features ...
+%                 right_eye_features right_eyebrow_features];
+% [eye_patch, ~, coords] = Get_SR_Patch(sr_image, eye_features, landmarks_sr, dataset_landmarks, "left_eyebrow_right_corner", 2, 3);
+% eye_patch = imhistmatch(eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = eye_patch;
 % pad = 3;
 % nose_roi_int = [coords(3)+pad coords(1)+pad;
 %                 coords(4)-pad coords(1)+pad;
@@ -179,4 +185,8 @@ fprintf('%s Mouth - Patched PSNR %2.5f, SSIM %2.5f\n', '', csnr(mouth_patch, uin
 fprintf('%s Mouth - Bicubic PSNR %2.5f, SSIM %2.5f\n', '', csnr(bicubic_mouth, uint8(hr_mouth),0,0), ssim(bicubic_mouth, uint8(hr_mouth), 'Exponents', [0 0 1]) );
 fprintf('%s Mouth - SR PSNR %2.5f, SSIM %2.5f\n', '', csnr(sr_mouth, uint8(hr_mouth),0,0), ssim(sr_mouth, uint8(hr_mouth), 'Exponents', [0 0 1]) );
 
+% Set the input basename of the file
+[~,name,ext] = fileparts(input);
+input = strcat(name,ext);
+imwrite(uint8(patched_image), ['Result/LBF_', input]);
 end
