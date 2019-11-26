@@ -1,4 +1,4 @@
-function [patch, original, coords] = Get_SR_Patch(image, features, landmarks, dataset_landmarks, center_feature, k, padding)
+function [patch, original, coords] = Get_SR_Patch(image, image_name, features, landmarks, dataset_landmarks, center_feature, k, padding)
 %GET_SR_PATCH Summary of this function goes here
 %   Detailed explanation goes here
 % Create a matrix of points containing the above features from the input
@@ -10,6 +10,10 @@ for i=1:length(features)
     feature_points(i,1) = feature.x;
     feature_points(i,2) = feature.y;
 end
+
+% Only use the images with the same expressions for rebuilding facial
+% structures
+% [~,~,dataset_landmarks] = get_cafe_classification(image_name, dataset_landmarks);
 
 dissimilarity = zeros(length(dataset_landmarks),1);
 for i=1:length(dataset_landmarks)
@@ -35,6 +39,9 @@ end
 % Choose the k highest similarities (or lowest dissimlarities)
 [vals, idxs] = mink(dissimilarity, k);
 transforms = transforms(idxs);
+
+% To use all the images in the training set, uncomment this line
+% idxs = 1:length(dataset_landmarks);
 
 % Re-create this region using just the images that are most similar
 
@@ -81,7 +88,7 @@ best_bbox_size = [min(candidate_bboxes(:,1)) max(candidate_bboxes(:,2)) ...
                   min(candidate_bboxes(:,3)) max(candidate_bboxes(:,4))];
 
 % Combine the FFTs from the candidate images based on their 
-norm = sum(vals);
+norm = sum(1./vals);
 [original, coords] = get_region(image, best_bbox_size, bbox_centers(end,:));
 
 % Idea 1: Just replace the patch with a normalized linear combination of
@@ -91,9 +98,9 @@ norm = sum(vals);
 % for i=1:length(idxs)
 %     region = get_region(imread(dataset_landmarks(idxs(i)).file), best_bbox_size, bbox_centers(i,:));
 %     if i==1
-%         final_fft = (vals(i)/norm)*fft2(region);
+%         final_fft = ((1/vals(i))/norm)*fft2(region);
 %     else
-%         temp_fft = (vals(i)/norm)*fft2(region);
+%         temp_fft = ((1/vals(i))/norm)*fft2(region);
 %         final_fft = temp_fft + final_fft;
 %     end
 % end
@@ -114,8 +121,8 @@ Y = double(Y);
 mY = mean(Y, 2);
 Y = Y - repmat(mY, [1, length(idxs)]);
 [V, Dl] = eig( Y'*Y );
-% Dl = Dl(end-k:end,end-k:end);
-% V = V(:,end-k:end);
+% Dl = Dl(end-25:end,end-25:end);
+% V = V(:,end-25:end);
 El = Y * V * Dl^(-0.5);
 Vl = V * Dl^(-0.5);
 weights = El' * (double(original) - mY);
