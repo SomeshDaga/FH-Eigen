@@ -42,7 +42,7 @@ resp = urlreadpost(url,{'api_key', api_key,...
 landmarks = jsondecode(resp);
 pause(0.5);
 if ~is_file && show_landmarks
-    subplot(1,1,1);
+    subplot(3,2,1);
     imshow(file_path)
     hold on
     fields = fieldnames(landmarks.faces.landmark);

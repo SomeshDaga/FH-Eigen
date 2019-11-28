@@ -10,17 +10,17 @@ x_min = round(bbox_centers(1) - bbox_size(1));
 if y_max > h
     y_min = y_min - (y_max - h);
     y_max = h;
-elseif y_min < 0
+elseif y_min < 1
     y_max = y_max - y_min;
-    y_min = 0;
+    y_min = 1;
 end
 
 if x_max > w
-    x_min = x_min - (x_max - h);
+    x_min = x_min - (x_max - w);
     x_max = w;
-elseif x_min < 0
+elseif x_min < 1
     x_max = x_max - x_min;
-    x_min = 0;
+    x_min = 1;
 end
 
 region = image(y_min:y_max,x_min:x_max);

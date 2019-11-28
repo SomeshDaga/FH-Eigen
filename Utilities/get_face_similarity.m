@@ -14,6 +14,7 @@ resp = urlreadpost(url,{'api_key', api_key,...
                         'image_file1', face_1,...                   
                         'image_file2', face_2});
 resp = jsondecode(resp);
+pause(0.5);
 confidence = resp.confidence;
 end
 

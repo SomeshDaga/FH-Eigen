@@ -15,7 +15,7 @@ par.k = 50; % No of eigenfaces to use
 % Perform a 80-20 split for the dataset
 % and create 5 folds such that all data gets a chance to be included
 % in both training and testing sets
-dataset = cvpartition(length(dataset_info.data), 'KFold', 5);
+dataset = cvpartition(length(dataset_info.data), 'KFold', 5); %length(dataset_info.data));
 
 face_recognition_results = zeros(length(sum(dataset.TestSize)),2);
 update_string_length = 0;
@@ -25,26 +25,28 @@ for fold=1:dataset.NumTestSets
     [El, Eh, mY, mX, Y, X, Vl, Dh] = Get_PCA_Train(par, train_idxs, dataset_info.data);
     for i=1:length(test_idxs)
         idx = i + sum(dataset.TestSize(1:fold-1));
-        for j=1:update_string_length
-            fprintf('\b');
-        end
-        update_string = sprintf("Processing %d of %d", idx, sum(dataset.TestSize));
+%         for j=1:update_string_length
+%             fprintf('\b');
+%         end
+        update_string = sprintf("Processing %d of %d\n", idx, sum(dataset.TestSize));
         update_string_length = strlength(update_string);
         fprintf(update_string);
         test_image = dataset_info.data(test_idxs(i)).file;
         [bicubic, sr, hr] = SR_by_PCA(par, test_image, El, Eh, mY, mX, X, Vl, Dh );
 
         % Extract landmarks from super-resolved image
-        landmark_bicubic = get_landmarks(bicubic, false);
         landmark_sr = get_landmarks(sr, false);
+        landmark_bicubic = get_landmarks(bicubic, false);
 
         % Use extracted landmarks to create another super-resolved image
+%         patched_image = SR_by_LBF( par, test_image, hr, sr, bicubic, landmark_sr, landmark_bicubic, dataset_info.data(train_idxs), mX);
         patched_image = SR_by_LBF( par, test_image, hr, sr, bicubic, landmark_sr, landmark_bicubic, dataset_info.data(train_idxs), mX);
         
         % Compare the face recognition thresholds
         sr_confidence = get_face_similarity(uint8(sr), uint8(hr));
         patched_confidence = get_face_similarity(uint8(patched_image), uint8(hr));
         face_recognition_results(idx, :) = [sr_confidence patched_confidence];
+        fprintf("Recognition Confidence: SR: %f%%, Patched %f%%\n", sr_confidence, patched_confidence);
     end
 end
 

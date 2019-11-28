@@ -1,9 +1,10 @@
-function [patch, original, coords] = Get_SR_Patch(image, image_name, features, landmarks, dataset_landmarks, center_feature, k, padding)
+function [patch, original, coords] = Get_SR_Patch(image, sr_image, image_name, features, landmarks, dataset_landmarks, center_feature, k, padding)
 %GET_SR_PATCH Summary of this function goes here
 %   Detailed explanation goes here
 % Create a matrix of points containing the above features from the input
 % image
-[im_h, im_w] = size(image);
+
+% Store the x,y positions of the given features
 feature_points = zeros(length(features),2);
 for i=1:length(features)
     feature = landmarks.faces.landmark.(features(i));
@@ -16,6 +17,7 @@ end
 % [~,~,dataset_landmarks] = get_cafe_classification(image_name, dataset_landmarks);
 
 dissimilarity = zeros(length(dataset_landmarks),1);
+% Store x,y positions for the given features for all training images
 for i=1:length(dataset_landmarks)
     candidate_points = zeros(length(features),2);
     for j=1:length(features)
@@ -29,16 +31,11 @@ for i=1:length(dataset_landmarks)
     % We disable scaling factors because the images are aligned and
     % and have been set to similar scales already via setting the center
     % eye distance to a fixed number of pixels
-    [dissimilarity(i), ~, transform] = procrustes(feature_points, candidate_points, 'scaling', false, 'reflection', false);
-    if i==1
-        transforms = repmat(struct(transform),length(dataset_landmarks),1);
-    end
-    transforms(i) = transform;
+    [dissimilarity(i), ~, ~] = procrustes(feature_points, candidate_points, 'scaling', false, 'Reflection', false);
 end
 
 % Choose the k highest similarities (or lowest dissimlarities)
 [vals, idxs] = mink(dissimilarity, k);
-transforms = transforms(idxs);
 
 % To use all the images in the training set, uncomment this line
 % idxs = 1:length(dataset_landmarks);
@@ -46,7 +43,7 @@ transforms = transforms(idxs);
 % Re-create this region using just the images that are most similar
 
 % Firstly, for all of the candidates images and the input image, we extract
-% the pixels at the mouth region
+% the pixels for the given feature region
 % We need the extracted regions to have the same dimensions for the math to
 % work out. Hence, we need to find the most conservative size of bounding
 % box that captures the mouth region in all the images
@@ -87,27 +84,10 @@ candidate_bboxes(end,:)= [min_x_dist max_x_dist min_y_dist max_y_dist];
 best_bbox_size = [min(candidate_bboxes(:,1)) max(candidate_bboxes(:,2)) ...
                   min(candidate_bboxes(:,3)) max(candidate_bboxes(:,4))];
 
-% Combine the FFTs from the candidate images based on their 
-norm = sum(1./vals);
-[original, coords] = get_region(image, best_bbox_size, bbox_centers(end,:));
+[original, ~] = get_region(image, best_bbox_size, bbox_centers(end,:));
+[~, coords] = get_region(sr_image, best_bbox_size, bbox_centers(end,:));
 
-% Idea 1: Just replace the patch with a normalized linear combination of
-% the best K patches based on similarity value alone
-% final_fft = zeros(coords(2)-coords(1), coords(4)-coords(3));
-% 
-% for i=1:length(idxs)
-%     region = get_region(imread(dataset_landmarks(idxs(i)).file), best_bbox_size, bbox_centers(i,:));
-%     if i==1
-%         final_fft = ((1/vals(i))/norm)*fft2(region);
-%     else
-%         temp_fft = ((1/vals(i))/norm)*fft2(region);
-%         final_fft = temp_fft + final_fft;
-%     end
-% end
-% 
-% patch = uint8(real(ifft2(final_fft)));
-
-% Idea 2: Perform a PCA-based procedure on the K most similar regions
+% Perform a PCA-based procedure on the K most similar regions
 % and replace the patch
 original = reshape(original, [numel(original), 1]);
 for i=1:length(idxs)
@@ -117,6 +97,7 @@ for i=1:length(idxs)
 %     waitforbuttonpress
     Y(:,i) = reshape(train_region,[numel(train_region),1]);
 end
+
 Y = double(Y);
 mY = mean(Y, 2);
 Y = Y - repmat(mY, [1, length(idxs)]);
@@ -125,6 +106,9 @@ Y = Y - repmat(mY, [1, length(idxs)]);
 % V = V(:,end-25:end);
 El = Y * V * Dl^(-0.5);
 Vl = V * Dl^(-0.5);
+size(El)
+size(original)
+size(mY)
 weights = El' * (double(original) - mY);
 patch = El * weights + mY;
 patch = uint8(reshape(patch, [coords(4)-coords(3) + 1, coords(2) - coords(1) + 1]));

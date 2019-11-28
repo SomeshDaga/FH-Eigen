@@ -1,4 +1,4 @@
-function [ patched_image ] = SR_by_LBF(par, input, hr, sr_image, bicubic_image, landmarks_sr, landmarks_bicubic, dataset_landmarks, mean_hr)
+function [ final_image ] = SR_by_LBF(par, input, hr, sr_image, bicubic_image, landmarks_sr, landmarks_bicubic, dataset_landmarks, mean_hr)
 %SR_BY_LBF Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -98,41 +98,132 @@ nose_features = ["nose_contour_left3",...
                  "nose_contour_right3",...
                  "nose_tip"];
 
-[mouth_patch, ~, coords] = Get_SR_Patch(bicubic_image, input, mouth_features, landmarks_bicubic, dataset_landmarks, "mouth_lower_lip_top", 12, 8);
-mouth_patch = imhistmatch(mouth_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
-patched_image(coords(3):coords(4),coords(1):coords(2)) = mouth_patch;
-sr_mouth = sr_image(coords(3):coords(4),coords(1):coords(2));
-bicubic_mouth = bicubic_image(coords(3):coords(4),coords(1):coords(2));
-hr_mouth = hr(coords(3):coords(4),coords(1):coords(2));
-
-[nose_patch, ~, coords] = Get_SR_Patch(sr_image, input, nose_features, landmarks_sr, dataset_landmarks, "nose_tip", 10, 3);
-nose_patch = imhistmatch(nose_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
-patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
-
+% [mouth_patch, ~, coords] = Get_SR_Patch(bicubic_image, sr_image, input, mouth_features, landmarks_bicubic, dataset_landmarks, "mouth_lower_lip_top", 8, 8);
+% mouth_patch = imhistmatch(mouth_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = mouth_patch;
+% sr_mouth = sr_image(coords(3):coords(4),coords(1):coords(2));
+% bicubic_mouth = bicubic_image(coords(3):coords(4),coords(1):coords(2));
+% hr_mouth = hr(coords(3):coords(4),coords(1):coords(2));
+% 
+% [nose_patch, ~, coords] = Get_SR_Patch(sr_image, sr_image, input, nose_features, landmarks_sr, dataset_landmarks, "nose_tip", 10, 3);
+% nose_patch = imhistmatch(nose_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
+% 
 % left_eye_features = [left_eye_features left_eyebrow_features];
-% [left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, input, left_eye_features, landmarks_sr, dataset_landmarks, "left_eye_center", 10, 3);
+% [left_eye_patch, ~, coords] = Get_SR_Patch(sr_image, sr_image, input, left_eye_features, landmarks_sr, dataset_landmarks, "left_eye_center", 10, 3);
 % left_eye_patch = imhistmatch(left_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 % patched_image(coords(3):coords(4),coords(1):coords(2)) = left_eye_patch;
 % 
 % right_eye_features = [right_eye_features right_eyebrow_features];
-% [right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, input, right_eye_features, landmarks_sr, dataset_landmarks, "right_eye_center", 10, 3);
+% [right_eye_patch, ~, coords] = Get_SR_Patch(sr_image, sr_image, input, right_eye_features, landmarks_sr, dataset_landmarks, "right_eye_center", 10, 3);
 % right_eye_patch = imhistmatch(right_eye_patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
 % patched_image(coords(3):coords(4),coords(1):coords(2)) = right_eye_patch;
 
+% features = [mouth_features];
+features = [mouth_features nose_features left_eye_features left_eyebrow_features right_eye_features right_eyebrow_features];
+% [x_mouth,y_mouth] = get_feature_points(mouth_features, landmarks_bicubic, true, "nose_tip");
+% [x_rest,y_rest] = get_feature_points([nose_features left_eye_features left_eyebrow_features right_eye_features right_eyebrow_features], landmarks_sr, true, "nose_tip");
+% f_test = [x_mouth+1i*y_mouth x_rest+1i*y_rest]';
+[x_test, y_test] = get_feature_points(features,landmarks_bicubic,true,"nose_tip");
+f_test = (abs(x_test+1j*y_test))';
+% f_test = [abs(x_mouth+1j*y_mouth)]';
+f_test = f_test / norm(f_test);
+
+for i=1:length(dataset_landmarks)
+    % Get the feature points for the candidate image centered with
+    % respect to the tip of the nose
+    [X,Y] = get_feature_points(features, dataset_landmarks(i), true, "nose_tip");
+    f(:,i) = abs(X+1j*Y);
+    f(:,i) = f(:,i)/norm(f(:,i));
+end
+
+% Compute the average landmark feature vector from the training samples
+f_avg = mean(f,2);
+G = f - repmat(f_avg, [1, length(dataset_landmarks)]);
+[V,D] = eig(G*G');
+% Keep the K best eigenconfigurations
+k = 25;
+V = V(:,end-k+1:end);
+D = D(end-k+1:end,end-k+1:end);
+E = V*(D^-1);
+% Project the test face landmark feature vector onto the eigenvector space
+% of the training landmarks
+f_test = E'*(f_test - f_avg);
+
+refined_procustes = zeros(length(dataset_landmarks),1);
+% procustes = zeros(length(dataset_landmarks),1);
+for i=1:length(dataset_landmarks)
+    % Project landmark eigenvectors onto candidate image
+    f_candidate = E'*(f(:,i) - f_avg);
+    refined_procustes(i) = sum((f_test - f_candidate).^2);
+%     procrustes(i) = procrustes([real(feature_points) imag(feature_points)], candidate_points, 'scaling', false, 'Reflection', false);
+end
+
+% Choose the P training faces that best align with the landmarks
+p = 30;
+[vals, idxs] = mink(refined_procustes, p);
+% idxs
+% 
+% plot(real(f_avg),imag(f_avg),'.b');
+% waitforbuttonpress
+% subplot(1,2,1)
+% imshow(uint8(hr));
+% 
+% for i=1:length(idxs)
+%     subplot(1,2,2)
+%     imshow(imread(dataset_landmarks(idxs(i)).file));
+%     waitforbuttonpress
+% end
+clear Y;
+sr = sr_image;
+original_size = size(sr);
+sr = reshape(sr, [numel(sr), 1]);
+bicubic = reshape(bicubic_image, [numel(bicubic_image),1]);
+for i=1:length(idxs)
+    train_img = imread(dataset_landmarks(idxs(i)).file);
+    [train_img, ~] = get_LR( train_img, par );
+%     subplot(1,1,1);
+%     imshow(train_region);
+%     waitforbuttonpress
+    Y(:,i) = reshape(train_img,[numel(train_img),1]);
+end
+
+Y = double(Y);
+mY = mean(Y, 2);
+Y = Y - repmat(mY, [1, length(idxs)]);
+[V, Dl] = eig( Y'*Y );
+% Dl = Dl(end-25:end,end-25:end);
+% V = V(:,end-25:end);
+El = Y * V * Dl^(-0.5);
+Vl = V * Dl^(-0.5);
+weights = El' * (double(bicubic) - mY);
+new_sr = El * weights + mY;
+new_sr = reshape(new_sr, original_size);
+% hold on
+% subplot(1,3,1)
+% imshow(uint8(hr));
+% subplot(1,3,2);
+% imshow(uint8(sr_image));
+% subplot(1,3,3);
+% imshow(uint8(new_sr));
+% hold off
+% waitforbuttonpress
+% [patch, ~, coords] = Get_SR_Patch(sr_image, sr_image, input, features, landmarks_bicubic, dataset_landmarks, "nose_tip", 5, 10);
+% % patch = imhistmatch(patch, patched_image(coords(3):coords(4),coords(1):coords(2)), 'method', 'polynomial');
+% patched_image(coords(3):coords(4),coords(1):coords(2)) = patch;
 % subplot(2,2,1)
 % imshow(uint8(hr));
 % subplot(2,2,2);
-% imshow(sr_image);
-% subplot(2,2,3);
 % imshow(bicubic_image);
+% subplot(2,2,3);
+% imshow(sr_image);
 % subplot(2,2,4);
 % imshow(patched_image);
 % waitforbuttonpress
-% size(hr)
 
 % Mouth patch psnr's/ssim's
 % subplot(2,2,1);
-% imshow(uint8(hr_mouth));
+% imshow(uint8(hr_mouth)); 
 % subplot(2,2,2);
 % imshow(bicubic_mouth);
 % subplot(2,2,3);
@@ -145,7 +236,8 @@ patched_image(coords(3):coords(4),coords(1):coords(2)) = nose_patch;
 % fprintf('%s Mouth - SR PSNR %2.5f, SSIM %2.5f\n', '', csnr(sr_mouth, uint8(hr_mouth),0,0), ssim(sr_mouth, uint8(hr_mouth), 'Exponents', [0 0 1]) );
 
 % Set the input basename of the file
-[~,name,ext] = fileparts(input);
-input = strcat(name,ext);
-imwrite(uint8(patched_image), ['Result/LBF_', input]);
+% [~,name,ext] = fileparts(input);
+% input = strcat(name,ext);
+% imwrite(uint8(patched_image), ['Result/LBF_', input]);
+final_image = uint8(new_sr);
 end
